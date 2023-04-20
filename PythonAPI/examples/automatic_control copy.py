@@ -145,13 +145,10 @@ class World(object):
         cam_pos_id = self.camera_manager.transform_index if self.camera_manager is not None else 0
 
         # Get a random blueprint.
-        # blueprint = random.choice(get_actor_blueprints(self.world, self._actor_filter, self._actor_generation))
+        ## Spawn a mini cooper.
         blueprint =get_actor_blueprints(self.world, self._actor_filter, self._actor_generation)[10]
-        # print("blueprint", blueprint)
 
-        for i in get_actor_blueprints(self.world, self._actor_filter, self._actor_generation):
-            print(i)
-        # print(get_actor_blueprints(self.world, self._actor_filter, self._actor_generation))
+
         blueprint.set_attribute('role_name', 'hero')
         if blueprint.has_attribute('color'):
             color = random.choice(blueprint.get_attribute('color').recommended_values)
@@ -747,11 +744,11 @@ def game_loop(args):
             agent = BasicAgent(world.player, 30)
             agent.follow_speed_limits(True)
         elif args.agent == "Constant":
-            agent = ConstantVelocityAgent(world.player, 30)
+            agent = ConstantVelocityAgent(world.player)#, 10)
             ground_loc = world.world.ground_projection(world.player.get_location(), 5)
             if ground_loc:
                 world.player.set_location(ground_loc.location + carla.Location(z=0.01))
-            agent.follow_speed_limits(True)
+            # agent.follow_speed_limits(True)
         elif args.agent == "Behavior":
             agent = BehaviorAgent(world.player, behavior=args.behavior)
 
@@ -767,7 +764,7 @@ def game_loop(args):
             if args.sync:
                 world.world.tick()
             else:
-                world.world.wait_for_tick()
+                x = world.world.wait_for_tick()
             if controller.parse_events():
                 return
 
@@ -785,6 +782,9 @@ def game_loop(args):
                     break
 
             control = agent.run_step()
+            print(x.timestamp.elapsed_seconds)
+            print("steering = ",  round(control.steer, 2))
+            # print(world.player.get_transform().rotation.yaw)
             # print(control)
             control.manual_gear_shift = False
             world.player.apply_control(control)
@@ -857,7 +857,7 @@ def main():
         "-a", "--agent", type=str,
         choices=["Behavior", "Basic", "Constant"],
         help="select which agent to run",
-        default="Behavior")
+        default='Constant')
     argparser.add_argument(
         '-b', '--behavior', type=str,
         choices=["cautious", "normal", "aggressive"],
