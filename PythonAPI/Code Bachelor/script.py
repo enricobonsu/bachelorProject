@@ -20,7 +20,7 @@ compassVal = 0
 currentTrajCrossed = False
 finalData = []
 trajCounter = 0
-fileCounter = 10
+fileCounter = 11
 
 # Updates if current trajectory has crossed a lane.
 
@@ -60,9 +60,11 @@ while True:
 
     # current center of the vehicle.
     cur = vehicle.get_location()
+    veh = vehicle.get_transform()
     ##
+    wp = map.get_waypoint(vehicle.get_location())
     trans = map.get_waypoint(vehicle.get_location()).transform
-    begin = carla.Location(trans.location.x, trans.location.y, 0)
+    # begin = carla.Location(trans.location.x, trans.location.y, 0)
     # end = carla.Location(trans.location.x, trans.location.y, 50)
     # debugger = world.debug
     # debugger.draw_line(begin, end, thickness=0.1, life_time=1)
@@ -121,19 +123,24 @@ while True:
 
     # print(snapshot.timestamp.delta_seconds)
     # # # print()
-    # if abs(vehicle.get_control().steer) > 0.0:
-    #     #"delta: ", snapshot.timestamp.delta_seconds,
-    #     #"current_waypoint: ", current_waypoint.id,  zegt niets, alleen dat er heel veel de wegen zijn opgedeeld in heel veel stukken
-    #     print("offcenter =", round(offsetCenter,3), ".diff in rotation =",round(differenceInForward,4), "steering = ", round(vehicle.get_control().steer,2))
-    #     # print("offcenter = " + "{:.3f}".format(
-    #     #     offsetCenter) + ". diff in rotation = " +  "{:.5f}".format(differenceInForward) + ". Steering angle = " + "{:.2f}".format(vehicle.get_control().steer))
-    # else:
-    #     print("offcenter =", round(offsetCenter,3), ".diff in rotation =",round(differenceInForward,4))
+    print(snapshot.timestamp.elapsed_seconds)
+    if (not wp.is_junction):
+        if abs(vehicle.get_control().steer) > 0.0:
+            # +" diff rot {:.1f} ".format((veh.rotation.yaw -trans.rotation.yaw))
+            # "delta: ", snapshot.timestamp.delta_seconds,
+            # "current_waypoint: ", current_waypoint.id,  zegt niets, alleen dat er heel veel de wegen zijn opgedeeld in heel veel stukken
+            print("is junction " + str(wp.is_junction), "road rot = {:.1f}".format(trans.rotation.yaw), "veh rot = {:.1f}".format(veh.rotation.yaw),
+                  "offcenter =", round(offsetCenter, 3), "steering = ",  round(vehicle.get_control().steer, 2))
+            # print("offcenter = " + "{:.3f}".format(
+            #     offsetCenter) + ". diff in rotation = " +  "{:.5f}".format(differenceInForward) + ". Steering angle = " + "{:.2f}".format(vehicle.get_control().steer))
+        else:
+            print("is junction " + str(wp.is_junction), "road rot = {:.1f}".format(trans.rotation.yaw), "veh rot = {:.1f}".format(veh.rotation.yaw), "offcenter =", round(offsetCenter, 3))
     # print("offcenter = " +
     #       "{:.3f}".format(offsetCenter) + ". diff in rotation = ","{:.5f}".format(differenceInForward))
 
+    # terminal state is wanneer deze wp.is_junction true is
     # timestamp elapsed_seconds == tijd in simulator.
-    if (len(tempData) < 100):
+    if (len(tempData) <  100):
         tempData.append([round(offsetCenter, 3), round(
             differenceInForward, 4), round(vehicle.get_control().steer, 2)])
     else:
@@ -156,7 +163,7 @@ while True:
                 steeringAngle = steeringAngle + \
                     [item[2] for item in trajectory]
 
-            pd.DataFrame({"offsetCenter": offsets, "differenceForward": differenceForward,
-                         "steeringAngle": steeringAngle}).to_csv('trajectories'+str(fileCounter)+'.csv', index=False)
+            pd.DataFrame({"offsetCenter": offsets, "vehicle rotation": veh.rotation.yaw,"road rotation": trans.rotation.yaw,
+                         "steeringAngle": steeringAngle, "is_junction":wp.is_junction}).to_csv('trajectories'+str(fileCounter)+'.csv', index=False)
             exit()
         # exit()
