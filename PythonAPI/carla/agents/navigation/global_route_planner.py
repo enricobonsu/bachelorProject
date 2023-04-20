@@ -11,6 +11,7 @@ This module provides GlobalRoutePlanner implementation.
 import math
 import numpy as np
 import networkx as nx
+import matplotlib.pyplot as plt
 
 import carla
 from agents.navigation.local_planner import RoadOption
@@ -94,6 +95,7 @@ class GlobalRoutePlanner(object):
         - path (list of carla.Waypoint):  list of waypoints between entry to exit, separated by the resolution
         """
         self._topology = []
+
         # Retrieving waypoints to construct a detailed topology
         for segment in self._wmap.get_topology():
             wp1, wp2 = segment[0], segment[1]
@@ -120,6 +122,7 @@ class GlobalRoutePlanner(object):
                     continue
                 seg_dict['path'].append(next_wps[0])
             self._topology.append(seg_dict)
+    
 
     def _build_graph(self):
         """
@@ -175,6 +178,9 @@ class GlobalRoutePlanner(object):
                     [exit_carla_vector.x, exit_carla_vector.y, exit_carla_vector.z]),
                 net_vector=vector(entry_wp.transform.location, exit_wp.transform.location),
                 intersection=intersection, type=RoadOption.LANEFOLLOW)
+        print(self._graph)
+        # nx.draw(self._graph,with_labels=True)
+        # plt.savefig("test.png")
 
     def _find_loose_ends(self):
         """

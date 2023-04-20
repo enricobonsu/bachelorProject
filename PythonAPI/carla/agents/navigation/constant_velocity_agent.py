@@ -10,6 +10,7 @@ It can also make use of the global route planner to follow a specifed route
 """
 
 import carla
+import math
 
 from agents.navigation.basic_agent import BasicAgent
 
@@ -21,7 +22,7 @@ class ConstantVelocityAgent(BasicAgent):
     wait for a bit, and then start again.
     """
 
-    def __init__(self, vehicle, target_speed=20, opt_dict={}, map_inst=None, grp_inst=None):
+    def __init__(self, vehicle, target_speed=30, opt_dict={}, map_inst=None, grp_inst=None):
         """
         Initialization the agent parameters, the local and the global planner.
 
@@ -33,7 +34,7 @@ class ConstantVelocityAgent(BasicAgent):
             :param grp_inst: GlobalRoutePlanner instance to avoid the expensive call of getting it.
         """
         super().__init__(vehicle, target_speed, opt_dict=opt_dict, map_inst=map_inst, grp_inst=grp_inst)
-
+        
         self._use_basic_behavior = False  # Whether or not to use the BasicAgent behavior when the constant velocity is down
         self._target_speed = target_speed / 3.6  # [m/s]
         self._current_speed = vehicle.get_velocity().length()  # [m/s]
@@ -69,7 +70,7 @@ class ConstantVelocityAgent(BasicAgent):
 
     def _set_constant_velocity(self, speed):
         """Forces the agent to drive at the specified speed"""
-        self._vehicle.enable_constant_velocity(carla.Vector3D(speed, 0, 0))
+        self._vehicle.enable_constant_velocity(carla.Vector3D(speed/3.6, 0, 0))
 
     def run_step(self):
         """Execute one step of navigation."""
@@ -111,10 +112,56 @@ class ConstantVelocityAgent(BasicAgent):
         # The longitudinal PID is overwritten by the constant velocity but it is
         # still useful to apply it so that the vehicle isn't moving with static wheels
         control = self._local_planner.run_step()
-        if hazard_detected:
-            self._set_constant_velocity(hazard_speed)
-        else:
-            self._set_constant_velocity(self._target_speed)
+
+
+        # ## current center of the vehicle.
+        # cur = self._vehicle.get_location()
+
+        # ##
+        # trans = self._map.get_waypoint(self._vehicle.get_location()).transform
+        
+        # ## current road center x,y
+        # cent = trans.location 
+
+        # ## Gets lane width
+        # roadWidth = self._map.get_waypoint(self._vehicle.get_location()).lane_width  
+
+        # ## Euclidean distance between center road and center vehicle.
+        # offsetCenter = 0
+
+        # # if abs(control.steer) > 0.0:
+        # #     print("offcenter = " + "{:.2f}".format(offsetCenter) +". road rotation = " , (round(trans.rotation.yaw,0) % 90) , ". vehicle rotation = ",(round(self._vehicle.get_transform().rotation.yaw,0) % 90), ". Steering angle = " + "{:.2f}".format(control.steer))
+        # # else:
+        # #     print("offcenter = " + "{:.2f}".format(offsetCenter) +". road rotation = " , (round(trans.rotation.yaw,0) % 90) , ". vehicle rotation = ", (round(self._vehicle.get_transform().rotation.yaw,0) % 90))
+
+        # # The difference between the rotation of the vehicle and the center of the road.
+        # diffCenter = cent-cur
+
+        # # Is right of the center
+
+        # # Negative offset from center means left of the center.
+        # # Positive means right of center.
+        # # if (offsetCenter >= 0.01):
+        # if (abs(diffCenter.x) > abs(diffCenter.y)):
+        #     if diffCenter.x > 0:
+        #         offsetCenter = -diffCenter.x
+        #     else:
+        #         offsetCenter = diffCenter.x
+        # else: # y-cor determines placing of the road.
+        #     if diffCenter.y > 0:
+        #         offsetCenter = -diffCenter.y
+        #     else:
+        #         offsetCenter = diffCenter.y
+        
+        # differenceInForward = carla.Vector3D.distance_2d(self._vehicle.get_transform().get_forward_vector(),trans.get_forward_vector())
+        # if abs(control.steer) > 0.0:
+        #     print("offcenter = " + "{:.3f}".format(offsetCenter) +". diff in rotation = ",diffCenter, round(differenceInForward,2), ". Steering angle = " + "{:.2f}".format(control.steer))
+        # else:
+        #     print( "offcenter = " + "{:.3f}".format(offsetCenter) +". diff in rotation = " , round(differenceInForward,2))
+        # if hazard_detected:
+        #     self._set_constant_velocity(hazard_speed)
+        # else:
+        #     self._set_constant_velocity(self._target_speed)
 
         return control
 

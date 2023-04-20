@@ -88,7 +88,6 @@ class VehiclePIDController():
         control.hand_brake = False
         control.manual_gear_shift = False
         self.past_steering = steering
-
         return control
 
 
@@ -233,9 +232,9 @@ class PIDLateralController():
         else:
             w_loc = waypoint.transform.location
 
-        w_vec = np.array([w_loc.x - ego_loc.x,
-                          w_loc.y - ego_loc.y,
-                          0.0])
+        w_vec = np.array([round(w_loc.x - ego_loc.x,2),
+                          round(w_loc.y - ego_loc.y,2),
+                          0.0]) # round the difference between road center and vehicle cente, helps with less often corrections.
 
         wv_linalg = np.linalg.norm(w_vec) * np.linalg.norm(v_vec)
         if wv_linalg == 0:
@@ -255,10 +254,7 @@ class PIDLateralController():
             _ie = 0.0
 
         tempVal =np.clip((self._k_p * _dot) + (self._k_d * _de) + (self._k_i * _ie), -1.0, 1.0)
-        tempVal = round(tempVal,1)
-        # if ( -0.01 > tempVal < 0.01):
-        #     tempVal = 0.0
-        # print("steering ",tempVal)
+        tempVal = round(tempVal,1) # round the steering angle to one decimal.
         return tempVal
 
     def change_parameters(self, K_P, K_I, K_D, dt):
