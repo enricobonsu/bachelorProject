@@ -36,7 +36,7 @@ class ConstantVelocityAgent(BasicAgent):
         super().__init__(vehicle, target_speed, opt_dict=opt_dict, map_inst=map_inst, grp_inst=grp_inst)
         
         self._use_basic_behavior = False  # Whether or not to use the BasicAgent behavior when the constant velocity is down
-        self._target_speed = target_speed / 3.6  # [m/s]
+        self._target_speed = target_speed   # [m/s]
         self._current_speed = vehicle.get_velocity().length()  # [m/s]
         self._constant_velocity_stop_time = None
         self._collision_sensor = None
@@ -54,7 +54,7 @@ class ConstantVelocityAgent(BasicAgent):
 
     def set_target_speed(self, speed):
         """Changes the target speed of the agent [km/h]"""
-        self._target_speed = speed / 3.6
+        self._target_speed = speed 
         self._local_planner.set_speed(speed)
 
     def stop_constant_velocity(self):
@@ -158,12 +158,15 @@ class ConstantVelocityAgent(BasicAgent):
         #     print("offcenter = " + "{:.3f}".format(offsetCenter) +". diff in rotation = ",diffCenter, round(differenceInForward,2), ". Steering angle = " + "{:.2f}".format(control.steer))
         # else:
         #     print( "offcenter = " + "{:.3f}".format(offsetCenter) +". diff in rotation = " , round(differenceInForward,2))
-        # if hazard_detected:
-        #     self._set_constant_velocity(hazard_speed)
-        # else:
-        #     self._set_constant_velocity(self._target_speed)
+        if hazard_detected:
+            self._set_constant_velocity(hazard_speed)
+            return self.add_emergency_stop(control)
+        else:
+            self._set_constant_velocity(self._target_speed)
+            return control
 
-        return control
+        
+        # return control
 
     def _set_collision_sensor(self):
         blueprint = self._world.get_blueprint_library().find('sensor.other.collision')
