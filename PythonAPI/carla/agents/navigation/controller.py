@@ -19,9 +19,8 @@ class VehiclePIDController():
     low level control a vehicle from client side
     """
 
-
-    def __init__(self, vehicle, args_lateral, args_longitudinal, offset=0, max_throttle=0.75, max_brake=0.3,
-                 max_steering=0.8):
+    def __init__(self, vehicle, args_lateral, args_longitudinal, offset=0, max_throttle=1.0, max_brake=1.0,
+                 max_steering=1.0):
         """
         Constructor method.
 
@@ -48,8 +47,10 @@ class VehiclePIDController():
         self._vehicle = vehicle
         self._world = self._vehicle.get_world()
         self.past_steering = self._vehicle.get_control().steer
-        self._lon_controller = PIDLongitudinalController(self._vehicle, **args_longitudinal)
-        self._lat_controller = PIDLateralController(self._vehicle, offset, **args_lateral)
+        self._lon_controller = PIDLongitudinalController(
+            self._vehicle, **args_longitudinal)
+        self._lat_controller = PIDLateralController(
+            self._vehicle, offset, **args_lateral)
 
     def run_step(self, target_speed, waypoint):
         """
@@ -89,7 +90,6 @@ class VehiclePIDController():
         control.manual_gear_shift = False
         self.past_steering = steering
         return control
-
 
     def change_longitudinal_PID(self, args_longitudinal):
         """Changes the parameters of the PIDLongitudinalController"""
@@ -156,7 +156,8 @@ class PIDLongitudinalController():
             _de = 0.0
             _ie = 0.0
 
-        tempVal =np.clip((self._k_p * error) + (self._k_d * _de) + (self._k_i * _ie), -1.0, 1.0)
+        tempVal = np.clip((self._k_p * error) + (self._k_d *
+                          _de) + (self._k_i * _ie), -1.0, 1.0)
         # tempVal = round(tempVal,1)
         # if ( -0.01 > tempVal < 0.01):
         #     tempVal = 0.0
@@ -228,19 +229,20 @@ class PIDLateralController():
             w_tran = waypoint.transform
             r_vec = w_tran.get_right_vector()
             w_loc = w_tran.location + carla.Location(x=self._offset*r_vec.x,
-                                                         y=self._offset*r_vec.y)
+                                                     y=self._offset*r_vec.y)
         else:
             w_loc = waypoint.transform.location
 
-        w_vec = np.array([round(w_loc.x - ego_loc.x,2),
-                          round(w_loc.y - ego_loc.y,2),
-                          0.0]) # round the difference between road center and vehicle cente, helps with less often corrections.
+        w_vec = np.array([round(w_loc.x - ego_loc.x, 2),
+                          round(w_loc.y - ego_loc.y, 2),
+                          0.0])  # round the difference between road center and vehicle cente, helps with less often corrections.
 
         wv_linalg = np.linalg.norm(w_vec) * np.linalg.norm(v_vec)
         if wv_linalg == 0:
             _dot = 1
         else:
-            _dot = math.acos(np.clip(np.dot(w_vec, v_vec) / (wv_linalg), -1.0, 1.0))
+            _dot = math.acos(
+                np.clip(np.dot(w_vec, v_vec) / (wv_linalg), -1.0, 1.0))
         _cross = np.cross(v_vec, w_vec)
         if _cross[2] < 0:
             _dot *= -1.0
@@ -253,8 +255,9 @@ class PIDLateralController():
             _de = 0.0
             _ie = 0.0
 
-        tempVal =np.clip((self._k_p * _dot) + (self._k_d * _de) + (self._k_i * _ie), -1.0, 1.0)
-        tempVal = round(tempVal,1) # round the steering angle to one decimal.
+        tempVal = np.clip((self._k_p * _dot) + (self._k_d *
+                          _de) + (self._k_i * _ie), -1.0, 1.0)
+        tempVal = round(tempVal, 1)  # round the steering angle to one decimal.
         return tempVal
 
     def change_parameters(self, K_P, K_I, K_D, dt):

@@ -22,7 +22,7 @@ class ConstantVelocityAgent(BasicAgent):
     wait for a bit, and then start again.
     """
 
-    def __init__(self, vehicle, target_speed=30, opt_dict={}, map_inst=None, grp_inst=None):
+    def __init__(self, vehicle, target_speed=30.0, opt_dict={}, map_inst=None, grp_inst=None):
         """
         Initialization the agent parameters, the local and the global planner.
 
@@ -103,7 +103,8 @@ class ConstantVelocityAgent(BasicAgent):
             hazard_detected = True
 
         # Check if the vehicle is affected by a red traffic light
-        max_tlight_distance = self._base_tlight_threshold + 0.3 * vehicle_speed
+        max_tlight_distance = self._base_tlight_threshold #+ 0.3 * vehicle_speed
+        print("max_tlight_distance", max_tlight_distance)
         affected_by_tlight, _ = self._affected_by_traffic_light(lights_list, max_tlight_distance)
         if affected_by_tlight:
             hazard_speed = 0
@@ -113,60 +114,14 @@ class ConstantVelocityAgent(BasicAgent):
         # still useful to apply it so that the vehicle isn't moving with static wheels
         control = self._local_planner.run_step()
 
-
-        # ## current center of the vehicle.
-        # cur = self._vehicle.get_location()
-
-        # ##
-        # trans = self._map.get_waypoint(self._vehicle.get_location()).transform
-        
-        # ## current road center x,y
-        # cent = trans.location 
-
-        # ## Gets lane width
-        # roadWidth = self._map.get_waypoint(self._vehicle.get_location()).lane_width  
-
-        # ## Euclidean distance between center road and center vehicle.
-        # offsetCenter = 0
-
-        # # if abs(control.steer) > 0.0:
-        # #     print("offcenter = " + "{:.2f}".format(offsetCenter) +". road rotation = " , (round(trans.rotation.yaw,0) % 90) , ". vehicle rotation = ",(round(self._vehicle.get_transform().rotation.yaw,0) % 90), ". Steering angle = " + "{:.2f}".format(control.steer))
-        # # else:
-        # #     print("offcenter = " + "{:.2f}".format(offsetCenter) +". road rotation = " , (round(trans.rotation.yaw,0) % 90) , ". vehicle rotation = ", (round(self._vehicle.get_transform().rotation.yaw,0) % 90))
-
-        # # The difference between the rotation of the vehicle and the center of the road.
-        # diffCenter = cent-cur
-
-        # # Is right of the center
-
-        # # Negative offset from center means left of the center.
-        # # Positive means right of center.
-        # # if (offsetCenter >= 0.01):
-        # if (abs(diffCenter.x) > abs(diffCenter.y)):
-        #     if diffCenter.x > 0:
-        #         offsetCenter = -diffCenter.x
-        #     else:
-        #         offsetCenter = diffCenter.x
-        # else: # y-cor determines placing of the road.
-        #     if diffCenter.y > 0:
-        #         offsetCenter = -diffCenter.y
-        #     else:
-        #         offsetCenter = diffCenter.y
-        
-        # differenceInForward = carla.Vector3D.distance_2d(self._vehicle.get_transform().get_forward_vector(),trans.get_forward_vector())
-        # if abs(control.steer) > 0.0:
-        #     print("offcenter = " + "{:.3f}".format(offsetCenter) +". diff in rotation = ",diffCenter, round(differenceInForward,2), ". Steering angle = " + "{:.2f}".format(control.steer))
-        # else:
-        #     print( "offcenter = " + "{:.3f}".format(offsetCenter) +". diff in rotation = " , round(differenceInForward,2))
         if hazard_detected:
             self._set_constant_velocity(hazard_speed)
+            # print(control)
             return self.add_emergency_stop(control)
         else:
             self._set_constant_velocity(self._target_speed)
+            # print(control)
             return control
-
-        
-        # return control
 
     def _set_collision_sensor(self):
         blueprint = self._world.get_blueprint_library().find('sensor.other.collision')

@@ -27,7 +27,7 @@ class BasicAgent(object):
     as well as to change its parameters in case a different driving mode is desired.
     """
 
-    def __init__(self, vehicle, target_speed=20, opt_dict={}, map_inst=None, grp_inst=None):
+    def __init__(self, vehicle, target_speed=30.0, opt_dict={}, map_inst=None, grp_inst=None):
         """
         Initialization the agent paramters, the local and the global planner.
 
@@ -52,13 +52,13 @@ class BasicAgent(object):
         self._last_traffic_light = None
 
         # Base parameters
-        self._ignore_traffic_lights = True
+        self._ignore_traffic_lights = False
         self._ignore_stop_signs = False
         self._ignore_vehicles = False
         self._use_bbs_detection = False
         self._target_speed = target_speed
-        self._sampling_resolution = 2.0
-        self._base_tlight_threshold = 5.0  # meters
+        self._sampling_resolution = 1.0
+        self._base_tlight_threshold = 1.0#5.0  # meters
         self._base_vehicle_threshold = 5.0  # meters
         self._speed_ratio = 1
         self._max_brake = 0.5
@@ -296,7 +296,7 @@ class BasicAgent(object):
             wp_dir = trigger_wp.transform.get_forward_vector()
             dot_ve_wp = ve_dir.x * wp_dir.x + ve_dir.y * wp_dir.y + ve_dir.z * wp_dir.z
 
-            if dot_ve_wp < 0:
+            if dot_ve_wp < 0: # car is between 90 and 270 degrees from the light trigger wp, thus faced backwards
                 continue
 
             if traffic_light.state != carla.TrafficLightState.Red:
