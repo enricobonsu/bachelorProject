@@ -302,7 +302,7 @@ class BasicAgent(object):
             if traffic_light.state != carla.TrafficLightState.Red:
                 continue
 
-            if is_within_distance(trigger_wp.transform, self._vehicle.get_transform(), max_distance, [0, 90]):
+            if is_within_distance(trigger_wp.transform, self._vehicle.get_transform(), max_distance, [-0.1, 90.1]):
                 self._last_traffic_light = traffic_light
                 return (True, traffic_light)
 
