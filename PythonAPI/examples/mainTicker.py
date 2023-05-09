@@ -116,10 +116,48 @@ def tick():
 
         (world, agent, destination) = trafficLoop.game_loop2(
             traffic_manager, world)
+        # print()
+        # agent._vehicle.set_target_velocity(30.0)
+        # Change Vehicle Physics Control parameters of the vehicle
+        # front_left_wheel  = carla.WheelPhysicsControl(tire_friction=0.0, damping_rate=1.0, max_steer_angle=70.0, radius=30.0)
+        # front_right_wheel = carla.WheelPhysicsControl(tire_friction=0.0, damping_rate=1.5, max_steer_angle=70.0, radius=25.0)
+        # rear_left_wheel   = carla.WheelPhysicsControl(tire_friction=0.0, damping_rate=0.2, max_steer_angle=0.0,  radius=15.0)
+        # rear_right_wheel  = carla.WheelPhysicsControl(tire_friction=0.0, damping_rate=1.3, max_steer_angle=0.0,  radius=20.0)
+
+        # wheels = [front_left_wheel, front_right_wheel, rear_left_wheel, rear_right_wheel]
+        physics_control = agent._vehicle.get_physics_control()
+
+        # print(physics_control.wheels[0].tire_friction)
+        wheels = []
+        for wheel in physics_control.wheels:
+            wheelToAdd = carla.WheelPhysicsControl(
+                tire_friction=0.0, damping_rate=wheel.damping_rate, max_steer_angle=wheel.max_steer_angle, radius=wheel.radius,
+                max_brake_torque=wheel.max_brake_torque, max_handbrake_torque=wheel.max_handbrake_torque, position=wheel.position,
+                long_stiff_value=wheel.long_stiff_value, lat_stiff_max_load=wheel.lat_stiff_max_load, lat_stiff_value=wheel.lat_stiff_value)
+            wheels.append(wheelToAdd)
+
+        physics_control.wheels = wheels
+        agent._vehicle.apply_physics_control(physics_control)
+        # physics_control = agent._vehicle.get_physics_control()
+        # print(physics_control.wheels[0].tire_friction)
+        # physics_control.torque_curve = [carla.Vector2D(x=0, y=400), carla.Vector2D(x=1300, y=600)]
+        # physics_control.max_rpm = 10000
+        # physics_control.moi = 1.0
+        # physics_control.damping_rate_full_throttle = 0.0
+        # physics_control.use_gear_autobox = True
+        # physics_control.gear_switch_time = 0.5
+        # physics_control.clutch_strength = 10
+        # physics_control.mass = 10000
+        # physics_control.drag_coefficient = 0.25
+        # physics_control.steering_curve = [carla.Vector2D(x=0, y=1), carla.Vector2D(x=100, y=1), carla.Vector2D(x=300, y=1)]
+        # physics_control.wheels = wheels
+
+        # Apply Vehicle Physics Control for the vehicle
+
         while True:
             # clock.tick()
             client.get_world().tick()
-            # print(record.recordPassingLightDemonstration(goal_loc=destination))
+            print(record.recordPassingLightDemonstration(goal_loc=destination))
             # record.drawTrafficLightTriggers()
             trafficLoop.tick_action(world,
                                     agent, destination, traffic_manager)
