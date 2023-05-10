@@ -15,3 +15,5 @@ README
 cache/*
 PythonAPI/codebachelor/__pycache__/*
 PythonAPI/codebachelor/cache/*
+PythonAPI/codebachelor/*
+
