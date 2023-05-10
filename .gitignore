@@ -1,0 +1,15 @@
+.vscode/*
+CHANGELOG
+CarlaUE4.exe
+CarlaUE4/*
+Co-Simulation/*
+Dockerfile
+Engine/*
+HDMaps/*
+LICENSE
+Plugins/*
+PythonAPI/examples/__pycache__/*
+PythonAPI/examples/_out/*
+PythonAPI/examples/test.png
+README
+cache/*
