@@ -13,3 +13,5 @@ PythonAPI/examples/_out/*
 PythonAPI/examples/test.png
 README
 cache/*
+PythonAPI/codebachelor/__pycache__/*
+PythonAPI/codebachelor/cache/*
