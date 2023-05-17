@@ -103,8 +103,7 @@ class ConstantVelocityAgent(BasicAgent):
             hazard_detected = True
 
         # Check if the vehicle is affected by a red traffic light
-        max_tlight_distance = self._base_tlight_threshold #+ 0.3 * vehicle_speed
-        print("max_tlight_distance", max_tlight_distance)
+        max_tlight_distance = self._base_tlight_threshold + 0.3 * vehicle_speed
         affected_by_tlight, _ = self._affected_by_traffic_light(lights_list, max_tlight_distance)
         if affected_by_tlight:
             hazard_speed = 0
@@ -116,11 +115,9 @@ class ConstantVelocityAgent(BasicAgent):
 
         if hazard_detected:
             self._set_constant_velocity(hazard_speed)
-            # print(control)
             return self.add_emergency_stop(control)
         else:
             self._set_constant_velocity(self._target_speed)
-            # print(control)
             return control
 
     def _set_collision_sensor(self):

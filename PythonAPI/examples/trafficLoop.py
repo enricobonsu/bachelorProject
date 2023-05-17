@@ -187,7 +187,7 @@ class World(object):
             # spawn_points = self.map.get_spawn_points()
             # spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
             spawn_point = self.map.get_waypoint(
-                location=carla.Location(x=-45.0, y=108.0, z=0.0)).transform
+                location=carla.Location(x=-45.0, y=78.0, z=0.0)).transform
             spawn_point.location.z += 0.1
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
             self.modify_vehicle_physics(self.player)
@@ -837,7 +837,7 @@ def tick_action(world, agent, destination, traffic_manager):
 
         if agent.done():
             begin = world.map.get_waypoint(
-                location=carla.Location(x=-45.0, y=108.0, z=0.0)).transform
+                location=carla.Location(x=-45.0, y=78.0, z=0.0)).transform
             begin.location.z += 0.1
             # begin =
             world.player.set_transform(begin)

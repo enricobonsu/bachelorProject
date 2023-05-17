@@ -3,12 +3,12 @@ import math
 import numpy as np
 import pandas as pd
 import misc
-import time 
+import time
 
 
 class RecordData(object):
 
-    def __init__(self,client):
+    def __init__(self, client):
         # --------------
         # Spawn ego vehicle
         # --------------
@@ -24,13 +24,15 @@ class RecordData(object):
         self.bbs = self.world.get_level_bbs(carla.CityObjectLabel.TrafficLight)
         self.debugger = self.world.debug
         self._last_traffic_light = None
+        self.demo = []
+        self.traj = []
 
         # Dictionary mapping a traffic light to a wp corrspoing to its trigger volume location
         self._lights_map = {}
         self.lastLoc = None
 
-
     # Draws waypoints that are the triggers for the traffic lights.
+
     def drawTrafficLightTriggers(self, seconds=1):
         for light in self.lights_list:
             for point in light.get_affected_lane_waypoints():
@@ -100,38 +102,31 @@ class RecordData(object):
                 return (2, None)
 
             if traffic_light.state != carla.TrafficLightState.Red:
-                if misc.is_within_distance(trigger_wp.transform, self.vehicle.get_transform(), max_distance, [0, 90]):
-                    # print("light not red, but close to")
+                if misc.is_within_distance(trigger_wp.transform, self.vehicle.get_transform(), max_distance, [-0.1, 90.0]):
                     return (3, None)
                 continue
            #  dot negative == car is between 90 and 270 degrees from the light trigger wp, thus faced backwards.
-            if misc.is_within_distance(trigger_wp.transform, self.vehicle.get_transform(), max_distance, [0, 90]):
+            if misc.is_within_distance(trigger_wp.transform, self.vehicle.get_transform(), max_distance, [-0.1, 90.0]):
                 self._last_traffic_light = traffic_light
-                # print("Light is red")
                 return (1, traffic_light)
 
         return (0, None)
 
-    def recordPassingLightDemonstration(self, trajCount=10, start_loc=None, goal_loc=None):
-        # vel  =
-        # (3.6 *math.sqrt(vel.x**2 + vel.y**2 + vel.z**2))
-        # return self.vehicle.get_velocity().length()
-        if self.lastLoc is not None:
-            x  = self.lastLoc
-            self.lastLoc = self.vehicle.get_location()
-            return self.vehicle.get_location().distance(x)
-        else:
-            self.lastLoc = self.vehicle.get_location()
-            return
-        demo = []
-        traj = []
+    def recordPassingLightDemonstration(self, goal_loc=None):
+        # if self.lastLoc is not None:
+        #     x  = self.lastLoc
+        #     self.lastLoc = self.vehicle.get_location()
+        #     return self.vehicle.get_location().distance(x)
+        # else:
+        #     self.lastLoc = self.vehicle.get_location()
+        #     return
+
         start = self.map.get_waypoint(
             location=carla.Location(x=-45.0, y=78.0, z=0.0)).transform
         start.location.z += 0.1
         end = goal_loc
-        
 
-        returnCode, light = self._affected_by_traffic_light(
+        returnCode, _ = self._affected_by_traffic_light(
             max_distance=2.0 + 0.3 * 30)
         # print()
 
@@ -160,42 +155,37 @@ class RecordData(object):
             passedIntersection = 0
             stop = 1 if self.vehicle.get_velocity().length() < 1.0 else 0
 
-        return [isInDistance, isRedLight, passedIntersection, stop,
-                end.location.distance(self.vehicle.get_location())]
+        self.traj.append([isInDistance, isRedLight, passedIntersection, stop,
+                          end.location.distance(self.vehicle.get_location())])
 
-        # if passedIntersection == 1:
-        #     if (len(traj) < 300):
-        #         traj.clear()
-        #         passedIntersection = 0
-        #     else:
+        if passedIntersection == 1:
+            if (len(self.traj) < 30):
+                self.traj.clear()
+                passedIntersection = 0
+            else:
 
-        #         demo.append(traj.copy())
-        #         print("traj added")
-        #         traj.clear()
-        #         # while not misc.is_within_distance(start, self.vehicle.get_transform(), 2, [0, 90]):
-        #         #     self.world.wait_for_tick()
-        #         #     print("clearing")
+                self.demo.append(self.traj.copy())
+                print("traj added")
+                self.traj.clear()
 
-        #         # Misschien moet er gewacht worden tot we weer zijn terug geteleporteerd.
+                if (len(self.demo) == 30):
+                    isInDistances = []
+                    isRedLights = []
+                    passedIntersections = []
+                    stops = []
+                    distances = []
+                    for count, trajectory in enumerate(self.demo):
+                        isInDistances = [item[0] for item in trajectory]
+                        isRedLights = [item[1] for item in trajectory]
+                        passedIntersections = [item[2]
+                                               for item in trajectory]
+                        stops = [item[3] for item in trajectory]
+                        distances = [item[4] for item in trajectory]
 
-        #         if (len(demo) == 30):
-        #             isInDistances = []
-        #             isRedLights = []
-        #             passedIntersections = []
-        #             stops = []
-        #             distances = []
-        #             for count, trajectory in enumerate(demo):
-        #                 isInDistances = [item[0] for item in trajectory]
-        #                 isRedLights = [item[1] for item in trajectory]
-        #                 passedIntersections = [item[2]
-        #                                        for item in trajectory]
-        #                 stops = [item[3] for item in trajectory]
-        #                 distances = [item[4] for item in trajectory]
-
-        #                 pd.DataFrame({"isInDistance": isInDistances, "isRedLight": isRedLights, "passedIntersection": passedIntersections,
-        #                                   "stop": stops, "distanceToGoal": distances}).to_csv('traj'+str(count) + '.csv', index=False)
-        #         else:
-        #             print("len(demo)", len(demo))
+                        pd.DataFrame({"isInDistance": isInDistances, "isRedLight": isRedLights, "passedIntersection": passedIntersections,
+                                      "stop": stops, "distanceToGoal": distances}).to_csv('traj'+str(count) + '.csv', index=False)
+                else:
+                    print("len(demo)", len(self.demo))
 
 # carla.map.get_waypoint()
 # x = -45, y = 78 , z= 0 , rot(0,-90,0)

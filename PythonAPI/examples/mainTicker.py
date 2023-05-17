@@ -13,7 +13,7 @@ def setup():
 
     settings = sim_world.get_settings()
     settings.synchronous_mode = True
-    settings.fixed_delta_seconds = 1/(30000/60/60) # we want 1 meter for every timestep passed when traveling 30km ph. 
+    settings.fixed_delta_seconds = 0.12
     settings.max_substep_delta_time = 0.01
     settings.max_substeps = 16
     sim_world.apply_settings(settings)
@@ -136,10 +136,11 @@ def tick():
         while True:
             # clock.tick()
             client.get_world().tick()
-            print(record.recordPassingLightDemonstration(goal_loc=destination))
             # record.drawTrafficLightTriggers()
             trafficLoop.tick_action(world,
                                     agent, destination, traffic_manager)
+            record.recordPassingLightDemonstration(goal_loc=destination)
+
     finally:
         if world is not None:
             settings = world.world.get_settings()
