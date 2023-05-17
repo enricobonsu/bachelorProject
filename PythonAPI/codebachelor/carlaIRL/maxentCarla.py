@@ -7,12 +7,11 @@ by Ziebart (2010).
 """
 
 import numpy as np
-from itertools import product
-
 
 # -- common functions ----------------------------------------------------------
 
-def feature_expectation_from_trajectories(features, trajectories):
+
+def feature_expectation_from_trajectories(stateToFeatures, trajectories):
     """
     Compute the feature expectation of the given trajectories.
 
@@ -28,13 +27,17 @@ def feature_expectation_from_trajectories(features, trajectories):
         The feature-expectation of the provided trajectories as map
         `[state: Integer] -> feature_expectation: Float`.
     """
-    n_states, n_features = features.shape
+    n_features = len(stateToFeatures[0])-1
 
     fe = np.zeros(n_features)
 
     for t in trajectories:
-        for s in t.states():
-            fe += features[s, :]
+        for state, freq in t.stateVisitationFrequency.items():
+            for _ in range(freq):
+                # print(t.stateVisitationFrequency)
+                # print(stateToFeatures[state][:3])
+                # exit()
+                fe += stateToFeatures[state][:3]
 
     return fe / len(trajectories)
 
@@ -55,7 +58,7 @@ def initial_probabilities_from_trajectories(n_states, trajectories):
     p = np.zeros(n_states)
 
     for t in trajectories:
-        p[t.transitions()[0][0]] += 1.0
+        p[t.startState] += 1.0
 
     return p / len(trajectories)
 
@@ -91,22 +94,22 @@ def expected_svf_from_policy(p_transition, p_initial, terminal, p_action, eps=1e
         The expected state visitation frequencies as map
         `[state: Integer] -> svf: Float`.
     """
-    n_states, _, n_actions = p_transition.shape
+    n_states, n_actions, _ = p_transition.shape
 
     # 'fix' our transition probabilities to allow for convergence
     # we will _never_ leave any terminal state
     p_transition = np.copy(p_transition)
-    p_transition[terminal, :, :] = 0.0
+    p_transition[list(terminal), :, :] = 0.0
 
     # set-up transition matrices for each action
-    p_transition = [np.array(p_transition[:, :, a]) for a in range(n_actions)]
-
+    p_transition = [np.array(p_transition[:, a, :]) for a in range(n_actions)]
     # actual forward-computation of state expectations
     d = np.zeros(n_states)
 
     delta = np.inf
     while delta > eps:
-        d_ = [p_transition[a].T.dot(p_action[:, a] * d) for a in range(n_actions)]
+        d_ = [p_transition[a].T.dot(p_action[:, a] * d)
+              for a in range(n_actions)]
         d_ = p_initial + np.array(d_).sum(axis=0)
 
         delta, d = np.max(np.abs(d_ - d)), d_
@@ -137,26 +140,36 @@ def local_action_probabilities(p_transition, terminal, reward):
         The local action probabilities (policy) as map
         `[state: Integer, action: Integer] -> probability: Float`
     """
-    n_states, _, n_actions = p_transition.shape
-
+    n_states, n_actions, _ = p_transition.shape
     er = np.exp(reward)
-    p = [np.array(p_transition[:, :, a]) for a in range(n_actions)]
+
+   
+    p = [np.array(p_transition[:, a, :]) for a in range(n_actions)]
 
     # initialize at terminal states
     zs = np.zeros(n_states)
-    zs[terminal] = 1.0
+    zs[list(terminal)] = 1.0
 
     # perform backward pass
     # This does not converge, instead we iterate a fixed number of steps. The
     # number of steps is chosen to reflect the maximum steps required to
     # guarantee propagation from any state to any other state and back in an
     # arbitrary MDP defined by p_transition.
-    for _ in range(2 * n_states):
+    for _ in range(2 * n_states):  
         za = np.array([er * p[a].dot(zs) for a in range(n_actions)]).T
         zs = za.sum(axis=1)
 
+        # print(za.sum(axis=1))
+        # exit()
+        # print(z,"zs",zs)
+    
+        
+    
     # compute local action probabilities
-    return za / zs[:, None]
+    value = za / zs[:, None]
+    # print(value)
+
+    return value
 
 
 def compute_expected_svf(p_transition, p_initial, terminal, reward, eps=1e-5):
@@ -193,7 +206,7 @@ def compute_expected_svf(p_transition, p_initial, terminal, reward, eps=1e-5):
     return expected_svf_from_policy(p_transition, p_initial, terminal, p_action, eps)
 
 
-def irl(p_transition, features, terminal, trajectories, optim, init, eps=1e-4, eps_esvf=1e-5):
+def irl(p_transition, stateToFeatures, terminal, trajectories, optim, init, eps=1e-4, eps_esvf=1e-5):
     """
     Compute the reward signal given the demonstration trajectories using the
     maximum entropy inverse reinforcement learning algorithm proposed in the
@@ -225,34 +238,45 @@ def irl(p_transition, features, terminal, trajectories, optim, init, eps=1e-4, e
     Returns:
         The reward per state as table `[state: Integer] -> reward: Float`.
     """
-    n_states, _, n_actions = p_transition.shape
-    _, n_features = features.shape
+
+    stateFeatureMatrix = np.array(list(stateToFeatures.values()))
+    stateFeatureMatrix = stateFeatureMatrix[:, :3]
+    # stateFeatureMatrix = stateFeatureMatrix+1
+    # print(stateToFeatures)
+    n_states, _, _ = p_transition.shape
+    n_features = len(stateToFeatures[0]) - 1
 
     # compute static properties from trajectories
-    e_features = feature_expectation_from_trajectories(features, trajectories)
+    e_features = feature_expectation_from_trajectories(
+        stateToFeatures, trajectories)
     p_initial = initial_probabilities_from_trajectories(n_states, trajectories)
 
     # basic gradient descent
     theta = init(n_features)
+    stateFeatureMatrix = stateFeatureMatrix
     delta = np.inf
 
     optim.reset(theta)
     while delta > eps:
         theta_old = theta.copy()
-
+        print("theta_old", theta_old)
         # compute per-state reward
-        reward = features.dot(theta)
+        reward = stateFeatureMatrix.dot(theta)
+        print("reward", reward)
 
         # compute the gradient
-        e_svf = compute_expected_svf(p_transition, p_initial, terminal, reward, eps_esvf)
-        grad = e_features - features.T.dot(e_svf)
+        e_svf = compute_expected_svf(
+            p_transition, p_initial, terminal, reward, eps_esvf)
+
+        grad = e_features - stateFeatureMatrix.T.dot(e_svf)
+
 
         # perform optimization step and compute delta for convergence
         optim.step(grad)
         delta = np.max(np.abs(theta_old - theta))
-
+    print(theta)
     # re-compute per-state reward and return
-    return features.dot(theta)
+    return stateFeatureMatrix.dot(theta)
 
 
 # -- maximum causal entropy (Ziebart 2010) -------------------------------------
@@ -326,7 +350,8 @@ def local_causal_action_probabilities(p_transition, terminal, reward, discount, 
     while delta > eps:
         v_old = v
 
-        q = np.array([reward + discount * p[a].dot(v_old) for a in range(n_actions)]).T
+        q = np.array([reward + discount * p[a].dot(v_old)
+                     for a in range(n_actions)]).T
 
         v = reward_terminal
         for a in range(n_actions):
@@ -376,7 +401,8 @@ def compute_expected_causal_svf(p_transition, p_initial, terminal, reward, disco
             the expected state visitation frequency changes less than the
             threshold on all states in a single iteration.
     """
-    p_action = local_causal_action_probabilities(p_transition, terminal, reward, discount, eps_lap)
+    p_action = local_causal_action_probabilities(
+        p_transition, terminal, reward, discount, eps_lap)
     return expected_svf_from_policy(p_transition, p_initial, terminal, p_action, eps_svf)
 
 
