@@ -20,8 +20,9 @@ class Demonstration:
 
         # contains probability of a given transition s,a,s'
         self.p_transition = self.generateProbTransition(
-            self.observedTransitions)
-        print(self.observedTransitions)
+            self.observedTransitions, self.stateTable)
+        # print(self.stateTable)
+        # exit()
         
         
 
@@ -43,7 +44,7 @@ class Demonstration:
             terminals.add(traj.terminalState)
         return terminals
 
-    def generateProbTransition(self, observedTransitions):
+    def generateProbTransition(self, observedTransitions, state=None):
         n_actions= set()
         n_states = set()
 
@@ -63,9 +64,34 @@ class Demonstration:
             probability = 1 / len(state_action_next[1])
             for next in state_action_next[1]:
                 table[state_action_next[0][0],state_action_next[0][1],next] = probability
-        #         print("(",state_action_next[0][0],state_action_next[0][1],next,") Has probability", probability)
-        # print("table[0,0,0]", table[0,0,0])
+                print("(",state_action_next[0][0],state_action_next[0][1],next,") Has probability", probability)
+
+        # Generate t probs for stopping
+        for features in state.items():
+            # State is not in distance of traffic light performing a stop will result in a loop.
+            if (features[1][0] == 0):
+                table[features[0],1,features[0]] = 1.0
+                print("(",features[0],1,features[0],") Has probability", table[features[0],1,features[0]])
+
+        # Generate t probability for not stopping when in front of Traffic light.
+        for features in state.items():
+            # State is not in distance of traffic light performing a stop will result in a loop.
+            if (features[1][0] == 1):
+                print(features[1])
+                # exit()
+                # list(filter(lambda x: np.array_equal(state[x], state), stateTable))[0] 
+                # table[features[0],1,features[0]] = 1.0
+                # print("(",features[0],1,features[0],") Has probability", table[features[0],1,features[0]])
+            
         # exit()
+        # Count number of transitions
+        countPossibleTransitions = 0
+        for transitions in table:
+            countPossibleTransitions += np.count_nonzero(transitions)
+
+        
+        print("Number of possible transitions", countPossibleTransitions)
+        
         return table
 
 

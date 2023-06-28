@@ -38,8 +38,17 @@ class DataFrameTrajectory(object):
         np2 = df.drop_duplicates().to_numpy(dtype=np.int32)
         stateTable = dict()
         
+        # The non observed states for the tf need to be provided.
         for state in range(np2.shape[0]):
-            stateTable[state] = np2[state, :4] # store features + distance as unique state.
+            z = np2[state, :4]
+            # print(z)
+            # z[0] =+1
+            # z[1] =+1
+            # z[2] =+1
+            # print(z)
+
+            # exit()
+            stateTable[state] = z # store features + distance as unique state.
 
         return stateTable
 
