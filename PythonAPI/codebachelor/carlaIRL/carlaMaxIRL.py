@@ -13,20 +13,20 @@ def maxent(demonstration):
     # set up features: we use one feature vector per state
     # we hebben 3 features (distance, redlight, passedIntersection)
     terminalStates = demonstration.terminalStates
-    print("terminalStates", terminalStates)
     p_transition = demonstration.p_transition
-    # print(p_transition)
-    # exit()
-    p_transition[list(demonstration.terminalStates),1,list(demonstration.terminalStates)] = 1 # terminal will always end into itself
-    # exit()
+
+    # p_transition[list(demonstration.terminalStates),1,list(demonstration.terminalStates)] = 1 # terminal will always end into itself
+    # p_transition[list(demonstration.terminalStates),0,list(demonstration.terminalStates)] = 1 # terminal will always end into itself
+
     trajectories = demonstration.trajectories
     stateToFeatures = demonstration.stateTable
+    
     # choose our parameter initialization strategy:
     #   initialize parameters with constant
-    init = O.Constant(1.0)
+    init = O.Constant(0.00000000001)
     # choose our optimization strategy:
     #   we select exponentiated gradient descent with linear learning-rate decay
-    optim = O.Sga(lr=O.linear_decay(lr0=0.001))
+    optim = O.ExpSga(lr=O.linear_decay(lr0=0.001))
     # actually do some inverse reinforcement learning
     reward = M.irl(p_transition,stateToFeatures,
                    terminalStates, trajectories, optim, init)

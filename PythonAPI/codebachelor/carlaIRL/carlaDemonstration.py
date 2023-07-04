@@ -9,22 +9,67 @@ class Demonstration:
         dfTrajectories = DataFrameTrajectory()
         self.trajectories = []
         self.stateTable = dfTrajectories.stateTable
+
+        # dfTrajectories.dfs is a list of trajectories that are stores as df
         for df in dfTrajectories.dfs:
             self.trajectories.append(Trajectory(df, self.stateTable))
 
-        self.observedTransitions = self.generateObservedTransition(
-            self.trajectories)
+        self.transitionTable = self.generateTransitionTable()
         self.terminalStates = self.terminalState(self.trajectories)
+
         # features exclude the distance to the goal.
-        self.features = len(dfTrajectories.stateTable[0])-1
+        self.features = len(dfTrajectories.stateTable.iloc[0])-1
 
         # contains probability of a given transition s,a,s'
-        self.p_transition = self.generateProbTransition(
-            self.observedTransitions, self.stateTable)
+        self.p_transition = self.generateProbTransition()
         # print(self.stateTable)
         # exit()
         
+    def generateProbTransition(self, debug=False):
+        n_states = self.stateTable.shape[0]
         
+        stateActions = list(self.transitionTable.keys())
+        possibleActions = set()
+        for stateAction in stateActions:
+            possibleActions.add(int(stateAction.split("-")[1]))
+        
+
+        n_actions = len(possibleActions)
+        pTable = np.zeros(shape=(n_states, n_actions,n_states))
+
+        for stateAction, outcomeStates in self.transitionTable.items():
+            pair = stateAction.split("-")
+            outcomes = set(outcomeStates)
+            n_outcomes = len(outcomes)
+            while outcomes:
+                state = outcomes.pop()
+                pTable[int(pair[0]),int(pair[1]), state] = 1/n_outcomes
+                if debug:
+                    print("(",pair[0],pair[1],state,") Has probability", 1/n_outcomes)
+        
+        if debug:
+            countPossibleTransitions = 0
+            for transitions in pTable:
+                countPossibleTransitions += np.count_nonzero(transitions)
+            print("Number of possible transitions", countPossibleTransitions)
+        return pTable
+
+
+
+        
+    # Generates a dict with the possible transitions for each state
+    def generateTransitionTable(self, terminalState = 87):
+        transitionDf = pd.read_csv("stateTransitions.csv")
+    
+        stateActionTransitions = dict()
+        for _, row in transitionDf.iterrows():
+            if int(row['state-action'].split("-")[0]) >= terminalState:
+                continue
+            stateActionTransitions[row['state-action']] = set(eval(row['transitions']))
+
+        print(stateActionTransitions)
+        return stateActionTransitions
+    
 
     def generateObservedTransition(self, trajectories):
         observedStateTransitions = dict()
@@ -43,57 +88,6 @@ class Demonstration:
         for traj in trajectories:
             terminals.add(traj.terminalState)
         return terminals
-
-    def generateProbTransition(self, observedTransitions, state=None):
-        n_actions= set()
-        n_states = set()
-
-        for state_action in observedTransitions.keys():
-            n_actions.add(state_action[1])
-
-        for state_action in observedTransitions.items():
-            n_states.add(state_action[0][0])
-            n_states.update(state_action[1])
-
-        n_states = len(n_states)
-        n_actions = len(n_actions)
-
-
-        table = np.zeros(shape=(n_states, n_actions,n_states))
-        for state_action_next in observedTransitions.items():
-            probability = 1 / len(state_action_next[1])
-            for next in state_action_next[1]:
-                table[state_action_next[0][0],state_action_next[0][1],next] = probability
-                print("(",state_action_next[0][0],state_action_next[0][1],next,") Has probability", probability)
-
-        # Generate t probs for stopping
-        for features in state.items():
-            # State is not in distance of traffic light performing a stop will result in a loop.
-            if (features[1][0] == 0):
-                table[features[0],1,features[0]] = 1.0
-                print("(",features[0],1,features[0],") Has probability", table[features[0],1,features[0]])
-
-        # Generate t probability for not stopping when in front of Traffic light.
-        for features in state.items():
-            # State is not in distance of traffic light performing a stop will result in a loop.
-            if (features[1][0] == 1):
-                print(features[1])
-                # exit()
-                # list(filter(lambda x: np.array_equal(state[x], state), stateTable))[0] 
-                # table[features[0],1,features[0]] = 1.0
-                # print("(",features[0],1,features[0],") Has probability", table[features[0],1,features[0]])
-            
-        # exit()
-        # Count number of transitions
-        countPossibleTransitions = 0
-        for transitions in table:
-            countPossibleTransitions += np.count_nonzero(transitions)
-
-        
-        print("Number of possible transitions", countPossibleTransitions)
-        
-        return table
-
 
 def main():
     demo = Demonstration()

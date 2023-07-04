@@ -27,16 +27,13 @@ def feature_expectation_from_trajectories(stateToFeatures, trajectories):
         The feature-expectation of the provided trajectories as map
         `[state: Integer] -> feature_expectation: Float`.
     """
-    n_features = len(stateToFeatures[0])-1
+    n_features = stateToFeatures.shape[1] - 1
 
     fe = np.zeros(n_features)
 
     for t in trajectories:
         for state, freq in t.stateVisitationFrequency.items():
             for _ in range(freq):
-                # print(t.stateVisitationFrequency)
-                # print(stateToFeatures[state][:3])
-                # exit()
                 fe += stateToFeatures[state][:3]
 
     return fe / len(trajectories)
@@ -141,6 +138,9 @@ def local_action_probabilities(p_transition, terminal, reward):
         `[state: Integer, action: Integer] -> probability: Float`
     """
     n_states, n_actions, _ = p_transition.shape
+    print("n_states", n_states)
+    print("n_actions", n_actions)
+    
     er = np.exp(reward)
 
    
@@ -149,14 +149,29 @@ def local_action_probabilities(p_transition, terminal, reward):
     # initialize at terminal states
     zs = np.zeros(n_states)
     zs[list(terminal)] = 1.0
+    print(zs)
+    print(zs.shape)
+    print(list(terminal))
+    print(p[0][87])
+    # exit()
+    # print(zs)
+    # print("\n\n\n\n")
+    # print(p[1][-1])
+    # print(list(terminal))
+    # exit()
 
     # perform backward pass
     # This does not converge, instead we iterate a fixed number of steps. The
     # number of steps is chosen to reflect the maximum steps required to
     # guarantee propagation from any state to any other state and back in an
     # arbitrary MDP defined by p_transition.
-    for _ in range(2 * n_states):  
+    for i in range(2 * n_states):  
         za = np.array([er * p[a].dot(zs) for a in range(n_actions)]).T
+        print(za)
+        
+        # if i == 5:
+        #     exit()
+        # print("za", za)
         zs = za.sum(axis=1)
 
         # print(za.sum(axis=1))
@@ -166,6 +181,13 @@ def local_action_probabilities(p_transition, terminal, reward):
         
     
     # compute local action probabilities
+    # print("list(terminal)", list(terminal))
+    # print("zs[:, None]")
+    # print(zs[:, None])
+    # print(zs[:, None].shape)
+    # print("za")
+    # print(za)
+    # exit()
     value = za / zs[:, None]
     # print(value)
 
@@ -239,21 +261,20 @@ def irl(p_transition, stateToFeatures, terminal, trajectories, optim, init, eps=
         The reward per state as table `[state: Integer] -> reward: Float`.
     """
 
-    stateFeatureMatrix = np.array(list(stateToFeatures.values()))
+    stateFeatureMatrix = stateToFeatures.to_numpy()
     stateFeatureMatrix = stateFeatureMatrix[:, :3]
-    # stateFeatureMatrix = stateFeatureMatrix+1
-    # print(stateToFeatures)
+
     n_states, _, _ = p_transition.shape
-    n_features = len(stateToFeatures[0]) - 1
+
+    n_features = stateToFeatures.shape[1] - 1
 
     # compute static properties from trajectories
     e_features = feature_expectation_from_trajectories(
-        stateToFeatures, trajectories)
+        stateToFeatures.to_numpy(), trajectories)
     p_initial = initial_probabilities_from_trajectories(n_states, trajectories)
 
     # basic gradient descent
     theta = init(n_features)
-    stateFeatureMatrix = stateFeatureMatrix
     delta = np.inf
 
     optim.reset(theta)
@@ -263,6 +284,7 @@ def irl(p_transition, stateToFeatures, terminal, trajectories, optim, init, eps=
         # compute per-state reward
         reward = stateFeatureMatrix.dot(theta)
         print("reward", reward)
+
 
         # compute the gradient
         e_svf = compute_expected_svf(
