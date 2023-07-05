@@ -17,15 +17,10 @@ class Demonstration:
         self.transitionTable = self.generateTransitionTable()
         self.terminalStates = self.terminalState(self.trajectories)
 
-        # features exclude the distance to the goal.
-        self.features = len(dfTrajectories.stateTable.iloc[0])-1
-
         # contains probability of a given transition s,a,s'
         self.p_transition = self.generateProbTransition()
-        # print(self.stateTable)
-        # exit()
         
-    def generateProbTransition(self, debug=False):
+    def generateProbTransition(self, debug=True):
         n_states = self.stateTable.shape[0]
         
         stateActions = list(self.transitionTable.keys())
@@ -36,13 +31,20 @@ class Demonstration:
 
         n_actions = len(possibleActions)
         pTable = np.zeros(shape=(n_states, n_actions,n_states))
-
+        
         for stateAction, outcomeStates in self.transitionTable.items():
             pair = stateAction.split("-")
             outcomes = set(outcomeStates)
             n_outcomes = len(outcomes)
             while outcomes:
                 state = outcomes.pop()
+                # print(self.stateTable)
+                # probability = 0.5
+                # if self.stateTable.iloc[int(pair[0])]['isInDistance'] == 1:
+                #     if int(pair[0]) == state:
+                #         probability -= 0.01
+                #     else:
+                #         probability += 0.01
                 pTable[int(pair[0]),int(pair[1]), state] = 1/n_outcomes
                 if debug:
                     print("(",pair[0],pair[1],state,") Has probability", 1/n_outcomes)
@@ -52,6 +54,7 @@ class Demonstration:
             for transitions in pTable:
                 countPossibleTransitions += np.count_nonzero(transitions)
             print("Number of possible transitions", countPossibleTransitions)
+        exit()
         return pTable
 
 
@@ -63,25 +66,13 @@ class Demonstration:
     
         stateActionTransitions = dict()
         for _, row in transitionDf.iterrows():
+            # Ignore transitions which are not observed during the demonstration
             if int(row['state-action'].split("-")[0]) >= terminalState:
                 continue
             stateActionTransitions[row['state-action']] = set(eval(row['transitions']))
 
-        print(stateActionTransitions)
         return stateActionTransitions
-    
 
-    def generateObservedTransition(self, trajectories):
-        observedStateTransitions = dict()
-        for traj in trajectories:
-            for transition in traj.transitions:
-                key = (transition[0], transition[1])
-                if key in observedStateTransitions:
-                    observedStateTransitions[key].add(transition[2])
-                else:
-                    observedStateTransitions[key] = {transition[2]}
-
-        return observedStateTransitions
 
     def terminalState(self, trajectories):
         terminals = set()

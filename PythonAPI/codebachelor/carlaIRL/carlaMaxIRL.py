@@ -11,34 +11,35 @@ def maxent(demonstration):
     Maximum Entropy Inverse Reinforcement Learning
     """
     # set up features: we use one feature vector per state
-    # we hebben 3 features (distance, redlight, passedIntersection)
+    # we hebben 3 features (inDistance, isRedlight, passedIntersection)
     terminalStates = demonstration.terminalStates
     p_transition = demonstration.p_transition
-
-    # p_transition[list(demonstration.terminalStates),1,list(demonstration.terminalStates)] = 1 # terminal will always end into itself
-    # p_transition[list(demonstration.terminalStates),0,list(demonstration.terminalStates)] = 1 # terminal will always end into itself
+     # terminal will always end into itself
+    p_transition[list(demonstration.terminalStates),1,list(demonstration.terminalStates)] = 1
+    p_transition[list(demonstration.terminalStates),0,list(demonstration.terminalStates)] = 1
 
     trajectories = demonstration.trajectories
     stateToFeatures = demonstration.stateTable
     
     # choose our parameter initialization strategy:
-    #   initialize parameters with constant
-    init = O.Constant(0.00000000001)
+    # initialize parameters with constant
+    init = O.Uniform(high=1.0)
     # choose our optimization strategy:
-    #   we select exponentiated gradient descent with linear learning-rate decay
-    optim = O.ExpSga(lr=O.linear_decay(lr0=0.001))
+    # we select exponentiated gradient descent with linear learning-rate decay
+    optim = O.ExpSga(lr=O.linear_decay(lr0=0.0001))
+
     # actually do some inverse reinforcement learning
     reward = M.irl(p_transition,stateToFeatures,
                    terminalStates, trajectories, optim, init)
     print()
-    print()
-    print(stateToFeatures)
-    print(np.where(reward != 0)[0])
+    # print(np.where(reward != 0)[0])
+    # print("The reward per state")
+    for index, i in enumerate(reward):
+        print(index, i)
     return reward
 
 
 def main():
-
     demonstration = Demonstration()
     maxent(demonstration)
 

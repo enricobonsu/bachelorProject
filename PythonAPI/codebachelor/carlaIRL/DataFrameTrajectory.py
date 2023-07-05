@@ -30,6 +30,9 @@ class DataFrameTrajectory(object):
     # Generates the feature for each unique
     def generateStateTable(self):
         df = pd.read_csv("stateFeatures.csv")
+        # df["isInDistance"] += 1 
+        # df["isRedLight"] += 1 
+        # df["passedIntersection"] += 1 
         stateDict = df.set_index('state')
         # print(stateDict)
         return stateDict
@@ -59,9 +62,15 @@ class DataFrameTrajectory(object):
         indexFurthestPoint = df.loc[(df['distanceToGoal'] == furthestPosition)].index.max()
 
         df = df.loc[indexFurthestPoint:]
-        columns_titles = ["isInDistance", "isRedLight",
+        columns_titles = ["isInDistance", "isRedLight","onIntersection",
                           "passedIntersection", "distanceToGoal", "stop"]
         df = df.reindex(columns=columns_titles) # make the action (stop) the last action
+        # df["isInDistance"] += 1 
+        # df["isRedLight"] += 1 
+        # df["passedIntersection"] += 1 
+
+        # print(df)
+        # exit()
         return df
 
 
