@@ -112,7 +112,7 @@ class RecordData(object):
 
         return (0, None)
 
-    def recordPassingLightDemonstration(self, goal_loc=None):
+    def recordPassingLightDemonstration(self, goal_loc=None, record=True, creatingTransitions = True):
         # if self.lastLoc is not None:
         #     x  = self.lastLoc
         #     self.lastLoc = self.vehicle.get_location()
@@ -155,37 +155,41 @@ class RecordData(object):
             passedIntersection = 0
             stop = 1 if self.vehicle.get_velocity().length() < 1.0 else 0
 
-        self.traj.append([isInDistance, isRedLight, passedIntersection, stop,
+        if record:
+            self.traj.append([isInDistance, isRedLight, passedIntersection, stop,
                           end.location.distance(self.vehicle.get_location())])
-
-        if passedIntersection == 1:
-            if (len(self.traj) < 30):
-                self.traj.clear()
-                passedIntersection = 0
-            else:
-
-                self.demo.append(self.traj.copy())
-                print("traj added")
-                self.traj.clear()
-
-                if (len(self.demo) == 30):
-                    isInDistances = []
-                    isRedLights = []
-                    passedIntersections = []
-                    stops = []
-                    distances = []
-                    for count, trajectory in enumerate(self.demo):
-                        isInDistances = [item[0] for item in trajectory]
-                        isRedLights = [item[1] for item in trajectory]
-                        passedIntersections = [item[2]
-                                               for item in trajectory]
-                        stops = [item[3] for item in trajectory]
-                        distances = [item[4] for item in trajectory]
-
-                        pd.DataFrame({"isInDistance": isInDistances, "isRedLight": isRedLights, "passedIntersection": passedIntersections,
-                                      "stop": stops, "distanceToGoal": distances}).to_csv('traj'+str(count) + '.csv', index=False)
+            if passedIntersection == 1:
+                if (len(self.traj) < 30):
+                    self.traj.clear()
+                    passedIntersection = 0
                 else:
-                    print("len(demo)", len(self.demo))
+
+                    self.demo.append(self.traj.copy())
+                    print("traj added")
+                    self.traj.clear()
+
+                    if (len(self.demo) == 30):
+                        isInDistances = []
+                        isRedLights = []
+                        passedIntersections = []
+                        stops = []
+                        distances = []
+                        for count, trajectory in enumerate(self.demo):
+                            isInDistances = [item[0] for item in trajectory]
+                            isRedLights = [item[1] for item in trajectory]
+                            passedIntersections = [item[2]
+                                                for item in trajectory]
+                            stops = [item[3] for item in trajectory]
+                            distances = [item[4] for item in trajectory]
+
+                            pd.DataFrame({"isInDistance": isInDistances, "isRedLight": isRedLights, "passedIntersection": passedIntersections,
+                                        "stop": stops, "distanceToGoal": distances}).to_csv('traj'+str(count) + '.csv', index=False)
+                    else:
+                        print("len(demo)", len(self.demo))
+        
+        if creatingTransitions:
+            return [isInDistance, isRedLight, passedIntersection, round(end.location.distance(self.vehicle.get_location()))]
+        return [isInDistance, isRedLight, passedIntersection, stop, round(end.location.distance(self.vehicle.get_location()))]
 
 # carla.map.get_waypoint()
 # x = -45, y = 78 , z= 0 , rot(0,-90,0)

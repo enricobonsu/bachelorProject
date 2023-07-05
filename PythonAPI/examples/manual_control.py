@@ -278,6 +278,11 @@ class World(object):
                 sys.exit(1)
             spawn_points = self.map.get_spawn_points()
             spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
+            
+            spawn_point = self.map.get_waypoint(carla.Location(x=16, y=-63, z=0.0)).transform
+            # spawn_point.location = carla.Location(spawn_point.location.x,spawn_point.location.y,spawn_point.location.z+1)
+            spawn_point.location.z += 0.1
+            print(spawn_point)
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
             self.show_vehicle_telemetry = False
             self.modify_vehicle_physics(self.player)

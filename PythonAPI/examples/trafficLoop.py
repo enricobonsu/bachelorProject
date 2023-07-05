@@ -119,7 +119,7 @@ def get_actor_blueprints(world, filter, generation):
 class World(object):
     """ Class representing the surrounding environment """
 
-    def __init__(self, carla_world, hud, args):
+    def __init__(self, carla_world, hud, args, client=None, scenario=0):
         """Constructor method"""
         self._args = args
         self.world = carla_world
@@ -141,12 +141,12 @@ class World(object):
         self._weather_index = 0
         self._actor_filter = args.filter
         self._actor_generation = args.generation
-        self.restart(args)
+        self.restart(args, client, scenario)
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
         self.recording_start = 0
 
-    def restart(self, args):
+    def restart(self, args, client, scenario=0):
         """Restart the world"""
 
         # Get a random blueprint.
@@ -186,9 +186,21 @@ class World(object):
                 sys.exit(1)
             # spawn_points = self.map.get_spawn_points()
             # spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
-            spawn_point = self.map.get_waypoint(
-                location=carla.Location(x=-45.0, y=78.0, z=0.0)).transform
+
+            # begin spawn
+            # Transform(Location(x=26.382587, y=-57.401386, z=0.600000), Rotation(pitch=0.000000, yaw=-0.023438, roll=0.000000))
+
+            # Spawn vehicle for the correct scenario
+            if scenario == 0:
+                spawn_point = self.map.get_waypoint(
+                    location=carla.Location(x=-45.0, y=78.0, z=0.0)).transform
+            else:
+                spawn_point = self.map.get_waypoint(
+                    location=carla.Location(x=5, y=-64, z=0.0)).transform
+
             spawn_point.location.z += 0.1
+
+            print("spawn - ", spawn_point)
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
             self.modify_vehicle_physics(self.player)
         # Set up the sensors.
@@ -754,7 +766,7 @@ class CameraManager(object):
 # ==============================================================================
 
 
-def game_loop(args, client, traffic_manager):
+def game_loop(args, client, traffic_manager, scenario=0):
     """
     Main loop of the simulation. It handles updating all the HUD information,
     ticking the agent and, if needed, the world.
@@ -771,7 +783,7 @@ def game_loop(args, client, traffic_manager):
         print("before hud")
         hud = HUD(args.width, args.height)
         print("before world")
-        world = World(client.get_world(), hud, args)
+        world = World(client.get_world(), hud, args, client, scenario)
         print("before return")
         return hud, world
 
@@ -789,14 +801,14 @@ def game_loop(args, client, traffic_manager):
         # pygame.quit()
 
 
-def game_loop2(traffic_manager, world):
+def game_loop2(traffic_manager, world, scenario=0):
     """
     Main loop of the simulation. It handles updating all the HUD information,
     ticking the agent and, if needed, the world.
     """
     try:
         agent = ConstantVelocityAgent(world.player)
-        
+
         ground_loc = world.world.ground_projection(
             world.player.get_location(), 5)
         if ground_loc:
@@ -804,17 +816,16 @@ def game_loop2(traffic_manager, world):
                 ground_loc.location + carla.Location(z=0.01))
 
         # Set the agent destination
-        # spawn_points = world.map.get_spawn_points()
-        # # --- setting custom end point
-        destination = world.map.get_waypoint(
-            location=carla.Location(x=-45.0, y=-30.0, z=0.0)).transform
+        if scenario == 0:
+            dest = world.map.get_waypoint(
+                carla.Location(x=-45.0, y=-30.0, z=0.0)).transform
+        else:
+            dest = world.map.get_waypoint(
+                carla.Location(x=46, y=-63, z=0.0)).transform
 
-        # destination = random.choice(spawn_points).location
-        agent.set_destination(destination.location)
+        agent.set_destination(dest.location)
+        return world, agent, dest
 
-        # clock = pygame.time.Clock()
-
-        return world, agent, destination
     except:
 
         if world is not None:
@@ -828,18 +839,84 @@ def game_loop2(traffic_manager, world):
 
         # pygame.quit()
 
+def tick_irl_agent(world, agent, destination, traffic_manager, brake=False):
+    try:
+        if agent.done():
+            begin = world.map.get_waypoint(
+                location=carla.Location(x=-45.0, y=78.0, z=0.0)).transform
 
-def tick_action(world, agent, destination, traffic_manager):
+            begin.location.z += 0.1
+
+            world.player.set_transform(begin)
+            agent.set_destination(start_location=begin.location,
+                                  end_location=destination.location)
+            
+            print("The target has been reached, searching for another target")
+            return agent.done()
+           
+        control = agent.run_transition(brake= brake)
+
+        control.manual_gear_shift = False
+        world.player.apply_control(control)
+        return agent.done()
+
+    except:
+        if world is not None:
+            settings = world.world.get_settings()
+            settings.synchronous_mode = False
+            settings.fixed_delta_seconds = None
+            world.world.apply_settings(settings)
+            traffic_manager.set_synchronous_mode(True)
+
+            world.destroy()
+
+def tick_generate_transitions(world, agent, destination, traffic_manager, brake=False):
+    try:
+        if agent.done():
+            begin = world.map.get_waypoint(
+                location=carla.Location(x=-45.0, y=78.0, z=0.0)).transform
+
+            begin.location.z += 0.1
+
+            world.player.set_transform(begin)
+            agent.set_destination(start_location=begin.location,
+                                  end_location=destination.location)
+            
+            print("The target has been reached, searching for another target")
+            return agent.done()
+           
+        control = agent.run_transition(brake= brake)
+
+        control.manual_gear_shift = False
+        world.player.apply_control(control)
+        return agent.done()
+
+    except:
+        if world is not None:
+            settings = world.world.get_settings()
+            settings.synchronous_mode = False
+            settings.fixed_delta_seconds = None
+            world.world.apply_settings(settings)
+            traffic_manager.set_synchronous_mode(True)
+
+            world.destroy()
+
+def tick_action(world, agent, destination, traffic_manager, features=None, scenario=0):
     try:
         # world.tick(clock)
         # world.render(display)
         # pygame.display.update()
 
         if agent.done():
-            begin = world.map.get_waypoint(
-                location=carla.Location(x=-45.0, y=78.0, z=0.0)).transform
+            if scenario == 0:
+                begin = world.map.get_waypoint(
+                    location=carla.Location(x=-45.0, y=78.0, z=0.0)).transform
+            else:
+                begin = world.map.get_waypoint(
+                    carla.Location(x=5, y=-64, z=0.0)).transform
+
             begin.location.z += 0.1
-            # begin =
+
             world.player.set_transform(begin)
             agent.set_destination(start_location=begin.location,
                                   end_location=destination.location)
@@ -847,7 +924,10 @@ def tick_action(world, agent, destination, traffic_manager):
             print("The target has been reached, searching for another target")
             # world.restart(args)
 
-        control = agent.run_step()
+        if (features is not None):
+            control = agent.run_feature_step()
+        else:
+            control = agent.run_step()
         # print(x.timestamp.elapsed_seconds)
         # print("steering = ",  round(control.steer, 2))
         # print(world.player.get_transform().rotation.yaw)
@@ -863,15 +943,6 @@ def tick_action(world, agent, destination, traffic_manager):
             traffic_manager.set_synchronous_mode(True)
 
             world.destroy()
-
-    #   if world is not None:
-    #         settings = world.world.get_settings()
-    #         settings.synchronous_mode = False
-    #         settings.fixed_delta_seconds = None
-    #         world.world.apply_settings(settings)
-    #         traffic_manager.set_synchronous_mode(True)
-
-    #         world.destroy()
 
 # ==============================================================================
 # -- main() --------------------------------------------------------------
