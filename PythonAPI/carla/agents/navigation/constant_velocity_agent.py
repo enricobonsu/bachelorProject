@@ -120,6 +120,69 @@ class ConstantVelocityAgent(BasicAgent):
             self._set_constant_velocity(self._target_speed)
             return control
 
+
+    def run_transition(self, brake=False):
+        """Execute one step of navigation."""
+        control = self._local_planner.run_step()
+        if brake:
+            self._set_constant_velocity(0)
+            control = self.add_emergency_stop(control)
+        else:
+            self._set_constant_velocity(self._target_speed)
+        return control
+
+
+    # Function which uses the observed features to decide which action to take.
+    def run_feature_step(self, features, transitionTable):
+        """Execute one step of navigation."""
+        if not self.is_constant_velocity_active:
+            if self._world.get_snapshot().timestamp.elapsed_seconds - self._constant_velocity_stop_time > self._restart_time:
+                self.restart_constant_velocity()
+                self.is_constant_velocity_active = True
+            elif self._use_basic_behavior:
+                return super(ConstantVelocityAgent, self).run_step()
+            else:
+                return carla.VehicleControl()
+
+
+        # Retrieve all relevant actors
+        actor_list = self._world.get_actors()
+        vehicle_list = actor_list.filter("*vehicle*")
+        lights_list = actor_list.filter("*traffic_light*")
+
+        vehicle_speed = self._vehicle.get_velocity().length()
+
+        max_vehicle_distance = self._base_vehicle_threshold + vehicle_speed
+        affected_by_vehicle, adversary, _ = self._vehicle_obstacle_detected(vehicle_list, max_vehicle_distance)
+        if affected_by_vehicle:
+            vehicle_velocity = self._vehicle.get_velocity()
+            if vehicle_velocity.length() == 0:
+                hazard_speed = 0
+            else:
+                hazard_speed = vehicle_velocity.dot(adversary.get_velocity()) / vehicle_velocity.length()
+            hazard_detected = True
+
+        # Check if the vehicle is affected by a red traffic light
+        max_tlight_distance = self._base_tlight_threshold + 0.3 * vehicle_speed
+        affected_by_tlight, _ = self._affected_by_traffic_light(lights_list, max_tlight_distance)
+        if affected_by_tlight:
+            hazard_speed = 0
+            hazard_detected = True
+
+        # The longitudinal PID is overwritten by the constant velocity but it is
+        # still useful to apply it so that the vehicle isn't moving with static wheels
+        control = self._local_planner.run_step()
+        performStop = self.feature_action()
+        if performStop:
+            self._set_constant_velocity(hazard_speed)
+            return self.add_emergency_stop(control)
+        else:
+            self._set_constant_velocity(self._target_speed)
+            return control
+    # def feature_action(self):
+
+
+
     def _set_collision_sensor(self):
         blueprint = self._world.get_blueprint_library().find('sensor.other.collision')
         self._collision_sensor = self._world.spawn_actor(blueprint, carla.Transform(), attach_to=self._vehicle)

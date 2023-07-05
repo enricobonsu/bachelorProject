@@ -44,6 +44,7 @@ class GlobalRoutePlanner(object):
         This method returns list of (carla.Waypoint, RoadOption)
         from origin to destination
         """
+        print("dest:",destination)
         route_trace = []
         route = self._path_search(origin, destination)
         current_waypoint = self._wmap.get_waypoint(origin)

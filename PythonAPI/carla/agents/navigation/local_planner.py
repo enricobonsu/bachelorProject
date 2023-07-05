@@ -177,16 +177,16 @@ class LocalPlanner(object):
                 break
             else:# len(next_waypoints) == 1:
                 # only one option available ==> lanefollowing
-                next_waypoint = next_waypoints[0]
-                road_option = RoadOption.LANEFOLLOW
+                # next_waypoint = next_waypoints[0]
+                # road_option = RoadOption.LANEFOLLOW
             # else:
             #     # random choice between the possible options
             #     # Always follow road
-            #     road_options_list = _retrieve_options(
-            #         next_waypoints, last_waypoint)
-            #     road_option = random.choice(road_options_list)
-            #     next_waypoint = next_waypoints[road_options_list.index(
-            #         road_option)]
+                road_options_list = _retrieve_options(
+                    next_waypoints, last_waypoint)
+                road_option = RoadOption.LANEFOLLOW
+                next_waypoint = next_waypoints[road_options_list.index(
+                    road_option)]
 
             self._waypoints_queue.append((next_waypoint, road_option))
 
@@ -221,7 +221,7 @@ class LocalPlanner(object):
 
         self._stop_waypoint_creation = stop_waypoint_creation
 
-    def run_step(self, debug=True):
+    def run_step(self, debug=False):
         """
         Execute one step of local planning which involves running the longitudinal and lateral PID controllers to
         follow the waypoints trajectory.
